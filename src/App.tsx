@@ -11,6 +11,7 @@ import AssignmentPage from "./pages/AssignmentPage";
 import RequestsPage from "./pages/RequestsPage";
 import BalancesPage from "./pages/BalancesPage";
 import ReportsPage from "./pages/ReportsPage";
+import CalendarPage from "./pages/CalendarPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <AppLayout>
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/leave-types" element={<LeaveTypesPage />} />
             <Route path="/leave-groups" element={<LeaveGroupsPage />} />
             <Route path="/assignment" element={<AssignmentPage />} />
