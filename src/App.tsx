@@ -11,6 +11,7 @@ import AssignmentPage from "./pages/AssignmentPage";
 import RequestsPage from "./pages/RequestsPage";
 import BalancesPage from "./pages/BalancesPage";
 import ReportsPage from "./pages/ReportsPage";
+import CalendarPage from "./pages/CalendarPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
