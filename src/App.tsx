@@ -25,6 +25,7 @@ const App = () => (
         <AppLayout>
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/leave-types" element={<LeaveTypesPage />} />
             <Route path="/leave-groups" element={<LeaveGroupsPage />} />
             <Route path="/assignment" element={<AssignmentPage />} />

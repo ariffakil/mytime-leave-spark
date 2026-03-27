@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/leave-types", icon: CalendarDays, label: "Leave Types" },
+  { to: "/calendar", icon: CalendarDays, label: "Team Calendar" },
+  { to: "/leave-types", icon: FolderCog, label: "Leave Types" },
   { to: "/leave-groups", icon: FolderCog, label: "Leave Groups" },
   { to: "/assignment", icon: Users, label: "Assignment" },
   { to: "/requests", icon: FileCheck, label: "Requests" },
