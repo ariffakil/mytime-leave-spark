@@ -1,10 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { PageHeader } from "@/components/leave/PageHeader";
-import { StatusBadge } from "@/components/leave/StatusBadge";
-import { leaveRequests, employees, leaveTypes, getEmployee, getLeaveType } from "@/data/leave-store";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { DrawerPanel } from "@/components/leave/DrawerPanel";
+import { leaveRequests, employees, leaveTypes, getEmployee, getLeaveType, LeaveRequest } from "@/data/leave-store";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   format,
   startOfMonth,
@@ -13,36 +16,53 @@ import {
   isSameMonth,
   isToday,
   parseISO,
-  isWithinInterval,
   addMonths,
   subMonths,
   getDay,
   startOfWeek,
   endOfWeek,
+  isBefore,
+  differenceInCalendarDays,
 } from "date-fns";
 
 interface LeaveEvent {
-  request: typeof leaveRequests[0];
+  request: LeaveRequest;
   employeeName: string;
   leaveTypeName: string;
   leaveColor: string;
 }
 
 export default function CalendarPage() {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 3, 1)); // April 2025 to show data
+  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 3, 1));
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Drag state
+  const [dragStart, setDragStart] = useState<Date | null>(null);
+  const [dragEnd, setDragEnd] = useState<Date | null>(null);
+  const isDragging = useRef(false);
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+  const [formEmployee, setFormEmployee] = useState<string>("");
+  const [formLeaveType, setFormLeaveType] = useState<string>("");
+  const [formReason, setFormReason] = useState("");
+
+  // Local requests state (to allow adding new ones)
+  const [localRequests, setLocalRequests] = useState<LeaveRequest[]>(leaveRequests);
 
   const departments = useMemo(() => [...new Set(employees.map(e => e.department))], []);
 
   const filteredRequests = useMemo(() => {
-    return leaveRequests.filter(req => {
+    return localRequests.filter(req => {
       if (statusFilter !== "all" && req.status !== statusFilter) return false;
       const emp = getEmployee(req.employeeId);
       if (departmentFilter !== "all" && emp?.department !== departmentFilter) return false;
       return true;
     });
-  }, [departmentFilter, statusFilter]);
+  }, [departmentFilter, statusFilter, localRequests]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -62,12 +82,7 @@ export default function CalendarPage() {
       days.forEach(day => {
         const key = format(day, "yyyy-MM-dd");
         const existing = map.get(key) || [];
-        existing.push({
-          request: req,
-          employeeName: emp.name,
-          leaveTypeName: lt.name,
-          leaveColor: lt.color,
-        });
+        existing.push({ request: req, employeeName: emp.name, leaveTypeName: lt.name, leaveColor: lt.color });
         map.set(key, existing);
       });
     });
@@ -76,7 +91,6 @@ export default function CalendarPage() {
 
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  // Timeline view data
   const timelineEmployees = useMemo(() => {
     const empIds = new Set(filteredRequests.map(r => r.employeeId));
     return employees.filter(e => empIds.has(e.id));
@@ -84,11 +98,82 @@ export default function CalendarPage() {
 
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  // Drag selection helpers
+  const dragRange = useMemo(() => {
+    if (!dragStart || !dragEnd) return null;
+    const s = isBefore(dragStart, dragEnd) ? dragStart : dragEnd;
+    const e = isBefore(dragStart, dragEnd) ? dragEnd : dragStart;
+    return { start: s, end: e };
+  }, [dragStart, dragEnd]);
+
+  const isInDragRange = useCallback(
+    (day: Date) => {
+      if (!dragRange) return false;
+      return day >= dragRange.start && day <= dragRange.end;
+    },
+    [dragRange]
+  );
+
+  const handleMouseDown = (day: Date) => {
+    if (!isSameMonth(day, currentMonth)) return;
+    isDragging.current = true;
+    setDragStart(day);
+    setDragEnd(day);
+  };
+
+  const handleMouseEnter = (day: Date) => {
+    if (!isDragging.current || !isSameMonth(day, currentMonth)) return;
+    setDragEnd(day);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging.current || !dragStart || !dragEnd) {
+      isDragging.current = false;
+      return;
+    }
+    isDragging.current = false;
+    const s = isBefore(dragStart, dragEnd) ? dragStart : dragEnd;
+    const e = isBefore(dragStart, dragEnd) ? dragEnd : dragStart;
+    setSelectedStartDate(s);
+    setSelectedEndDate(e);
+    setFormEmployee("");
+    setFormLeaveType("");
+    setFormReason("");
+    setDrawerOpen(true);
+    setDragStart(null);
+    setDragEnd(null);
+  };
+
+  const handleSubmit = () => {
+    if (!selectedStartDate || !selectedEndDate || !formEmployee || !formLeaveType) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+    const days = differenceInCalendarDays(selectedEndDate, selectedStartDate) + 1;
+    const newReq: LeaveRequest = {
+      id: `lr${Date.now()}`,
+      employeeId: formEmployee,
+      leaveTypeId: formLeaveType,
+      startDate: format(selectedStartDate, "yyyy-MM-dd"),
+      endDate: format(selectedEndDate, "yyyy-MM-dd"),
+      days,
+      reason: formReason,
+      status: "pending",
+      appliedOn: format(new Date(), "yyyy-MM-dd"),
+    };
+    setLocalRequests(prev => [...prev, newReq]);
+    setDrawerOpen(false);
+    const emp = getEmployee(formEmployee);
+    toast.success(`Leave request created for ${emp?.name}`, {
+      description: `${format(selectedStartDate, "MMM d")} – ${format(selectedEndDate, "MMM d")} (${days} day${days > 1 ? "s" : ""})`,
+    });
+  };
+
   return (
-    <div>
+    <div onMouseUp={handleMouseUp}>
       <PageHeader
         title="Team Calendar"
-        description="Visualize leave schedules and team availability"
+        description="Drag across dates to create a leave request"
         actions={
           <div className="flex items-center gap-2">
             <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
@@ -144,7 +229,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-card border border-border rounded-xl shadow-card overflow-hidden mb-6">
+      <div className="bg-card border border-border rounded-xl shadow-card overflow-hidden mb-6 select-none">
         <div className="grid grid-cols-7">
           {weekDays.map(day => (
             <div key={day} className="px-2 py-2.5 text-xs font-medium text-muted-foreground text-center border-b border-border bg-muted/30">
@@ -158,28 +243,36 @@ export default function CalendarPage() {
             const events = eventsMap.get(key) || [];
             const inMonth = isSameMonth(day, currentMonth);
             const today = isToday(day);
+            const inDrag = isInDragRange(day) && inMonth;
 
             return (
               <div
                 key={i}
-                className={`min-h-[100px] border-b border-r border-border p-1.5 transition-colors ${
-                  !inMonth ? "bg-muted/20" : "bg-card hover:bg-muted/30"
+                onMouseDown={() => handleMouseDown(day)}
+                onMouseEnter={() => handleMouseEnter(day)}
+                className={`min-h-[100px] border-b border-r border-border p-1.5 transition-colors cursor-crosshair ${
+                  inDrag
+                    ? "bg-primary/15 ring-1 ring-inset ring-primary/40"
+                    : !inMonth
+                    ? "bg-muted/20 cursor-default"
+                    : "bg-card hover:bg-muted/30"
                 } ${today ? "ring-2 ring-inset ring-primary/30" : ""}`}
               >
-                <div className={`text-xs font-medium mb-1 ${
-                  today ? "text-primary font-bold" : inMonth ? "text-foreground" : "text-muted-foreground/50"
-                }`}>
+                <div
+                  className={`text-xs font-medium mb-1 ${
+                    today ? "text-primary font-bold" : inMonth ? "text-foreground" : "text-muted-foreground/50"
+                  }`}
+                >
                   {format(day, "d")}
                 </div>
                 <div className="space-y-0.5">
                   {events.slice(0, 3).map((ev, j) => (
                     <div
                       key={j}
-                      className="text-[10px] leading-tight px-1.5 py-0.5 rounded truncate text-white font-medium"
+                      className="text-[10px] leading-tight px-1.5 py-0.5 rounded truncate text-white font-medium pointer-events-none"
                       style={{
-                        backgroundColor: ev.request.status === "rejected"
-                          ? "hsl(var(--muted-foreground))"
-                          : ev.leaveColor,
+                        backgroundColor:
+                          ev.request.status === "rejected" ? "hsl(var(--muted-foreground))" : ev.leaveColor,
                         opacity: ev.request.status === "pending" ? 0.7 : 1,
                       }}
                       title={`${ev.employeeName} — ${ev.leaveTypeName} (${ev.request.status})`}
@@ -203,11 +296,12 @@ export default function CalendarPage() {
       <div className="bg-card border border-border rounded-xl shadow-card overflow-hidden">
         <div className="p-4 border-b border-border">
           <h3 className="text-sm font-semibold text-foreground">Team Timeline</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Employee leave schedule for {format(currentMonth, "MMMM yyyy")}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Employee leave schedule for {format(currentMonth, "MMMM yyyy")}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <div className="min-w-[800px]">
-            {/* Timeline Header */}
             <div className="flex border-b border-border">
               <div className="w-[180px] shrink-0 px-4 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
                 Employee
@@ -219,7 +313,11 @@ export default function CalendarPage() {
                     <div
                       key={i}
                       className={`flex-1 min-w-[28px] text-center py-2 text-[10px] font-medium border-l border-border ${
-                        isWeekend ? "bg-muted/40 text-muted-foreground/60" : isToday(day) ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground"
+                        isWeekend
+                          ? "bg-muted/40 text-muted-foreground/60"
+                          : isToday(day)
+                          ? "bg-primary/10 text-primary font-bold"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {format(day, "d")}
@@ -228,12 +326,8 @@ export default function CalendarPage() {
                 })}
               </div>
             </div>
-
-            {/* Timeline Rows */}
             {timelineEmployees.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No leave events this month
-              </div>
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">No leave events this month</div>
             ) : (
               timelineEmployees.map(emp => {
                 const empRequests = filteredRequests.filter(r => r.employeeId === emp.id);
@@ -252,28 +346,21 @@ export default function CalendarPage() {
                       {daysInMonth.map((day, i) => {
                         const isWeekend = getDay(day) === 0 || getDay(day) === 6;
                         return (
-                          <div
-                            key={i}
-                            className={`flex-1 min-w-[28px] border-l border-border ${isWeekend ? "bg-muted/20" : ""}`}
-                          />
+                          <div key={i} className={`flex-1 min-w-[28px] border-l border-border ${isWeekend ? "bg-muted/20" : ""}`} />
                         );
                       })}
-                      {/* Overlay leave bars */}
                       {empRequests.map(req => {
                         const lt = getLeaveType(req.leaveTypeId);
                         const start = parseISO(req.startDate);
                         const end = parseISO(req.endDate);
                         const monthStartDay = monthStart.getDate();
                         const totalDays = daysInMonth.length;
-
                         const barStart = Math.max(0, start.getDate() - monthStartDay);
                         const barEnd = Math.min(totalDays - 1, end.getDate() - monthStartDay);
                         if (barStart > totalDays - 1 || barEnd < 0) return null;
                         if (!isSameMonth(start, currentMonth) && !isSameMonth(end, currentMonth)) return null;
-
                         const leftPct = (barStart / totalDays) * 100;
                         const widthPct = ((barEnd - barStart + 1) / totalDays) * 100;
-
                         return (
                           <div
                             key={req.id}
@@ -296,6 +383,105 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Leave Request Drawer */}
+      <DrawerPanel
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="New Leave Request"
+        description={
+          selectedStartDate && selectedEndDate
+            ? `${format(selectedStartDate, "MMM d, yyyy")} – ${format(selectedEndDate, "MMM d, yyyy")} (${differenceInCalendarDays(selectedEndDate, selectedStartDate) + 1} day${differenceInCalendarDays(selectedEndDate, selectedStartDate) > 0 ? "s" : ""})`
+            : undefined
+        }
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setDrawerOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmit}>
+              <Plus className="h-4 w-4 mr-1" />
+              Create Request
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          {/* Date display */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Start Date</Label>
+              <div className="mt-1 px-3 py-2 rounded-lg border border-border bg-muted/30 text-sm font-medium text-foreground">
+                {selectedStartDate ? format(selectedStartDate, "MMM d, yyyy") : "—"}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">End Date</Label>
+              <div className="mt-1 px-3 py-2 rounded-lg border border-border bg-muted/30 text-sm font-medium text-foreground">
+                {selectedEndDate ? format(selectedEndDate, "MMM d, yyyy") : "—"}
+              </div>
+            </div>
+          </div>
+
+          {/* Employee */}
+          <div>
+            <Label className="text-xs text-muted-foreground">Employee *</Label>
+            <Select value={formEmployee} onValueChange={setFormEmployee}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select employee" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map(emp => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-accent inline-flex items-center justify-center text-[9px] font-semibold text-accent-foreground">
+                        {emp.avatar}
+                      </span>
+                      {emp.name}
+                      <span className="text-muted-foreground">· {emp.department}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Leave Type */}
+          <div>
+            <Label className="text-xs text-muted-foreground">Leave Type *</Label>
+            <Select value={formLeaveType} onValueChange={setFormLeaveType}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select leave type" />
+              </SelectTrigger>
+              <SelectContent>
+                {leaveTypes.map(lt => (
+                  <SelectItem key={lt.id} value={lt.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: lt.color }} />
+                      {lt.name}
+                      {!lt.paid && <span className="text-muted-foreground text-xs">(Unpaid)</span>}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <Label className="text-xs text-muted-foreground">Reason</Label>
+            <Textarea
+              className="mt-1 min-h-[80px]"
+              placeholder="Optional reason for leave…"
+              value={formReason}
+              onChange={e => setFormReason(e.target.value)}
+            />
+          </div>
+
+          {/* Info hint */}
+          <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5 text-xs text-muted-foreground">
+            <span className="font-medium text-primary">Tip:</span> Drag across multiple days on the calendar grid to quickly select a date range, then fill in the details here.
+          </div>
+        </div>
+      </DrawerPanel>
     </div>
   );
 }
