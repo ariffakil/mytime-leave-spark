@@ -36,6 +36,15 @@ export interface Employee {
   leaveGroupId: string | null;
 }
 
+export interface ApprovalStep {
+  level: number;
+  role: "Department Head" | "HR Manager" | "General Manager";
+  status: "pending" | "approved" | "rejected" | "skipped";
+  approverName?: string;
+  comment?: string;
+  actionDate?: string;
+}
+
 export interface LeaveRequest {
   id: string;
   employeeId: string;
@@ -48,6 +57,9 @@ export interface LeaveRequest {
   appliedOn: string;
   reviewedBy?: string;
   reviewedOn?: string;
+  alternativeEmployeeId?: string;
+  attachments?: { name: string; size: string; type: string }[];
+  approvalChain: ApprovalStep[];
 }
 
 export interface LeaveBalance {
