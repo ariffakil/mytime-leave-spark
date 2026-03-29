@@ -160,6 +160,11 @@ export default function CalendarPage() {
       reason: formReason,
       status: "pending",
       appliedOn: format(new Date(), "yyyy-MM-dd"),
+      approvalChain: [
+        { level: 1, role: "Department Head", status: "pending" },
+        { level: 2, role: "HR Manager", status: "pending" },
+        { level: 3, role: "General Manager", status: "pending" },
+      ],
     };
     setLocalRequests(prev => [...prev, newReq]);
     setDrawerOpen(false);
