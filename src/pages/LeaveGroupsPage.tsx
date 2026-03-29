@@ -13,9 +13,22 @@ export default function LeaveGroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<LeaveGroup | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingNew, setEditingNew] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
 
   const openGroupDetail = (g: LeaveGroup) => { setSelectedGroup(g); setEditingNew(false); setDrawerOpen(true); };
-  const openNewGroup = () => { setSelectedGroup(null); setEditingNew(true); setDrawerOpen(true); };
+  const openNewGroup = () => { setSelectedGroup(null); setEditingNew(true); setNewName(""); setNewDesc(""); setDrawerOpen(true); };
+
+  const saveNewGroup = () => {
+    if (!newName.trim()) return;
+    const newGroup: LeaveGroup = {
+      id: `lg${Date.now()}`, name: newName.trim(), description: newDesc.trim(),
+      rules: [], createdAt: new Date().toISOString().split("T")[0],
+    };
+    setGroups([...groups, newGroup]);
+    setSelectedGroup(newGroup);
+    setEditingNew(false);
+  };
 
   const addRule = () => {
     if (!selectedGroup) return;
@@ -79,14 +92,14 @@ export default function LeaveGroupsPage() {
         footer={
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setDrawerOpen(false)}>Close</Button>
-            <Button onClick={() => setDrawerOpen(false)}>Save Changes</Button>
+            <Button onClick={() => { if (editingNew) { saveNewGroup(); } else { setDrawerOpen(false); } }}>{editingNew ? "Create Group" : "Save Changes"}</Button>
           </div>
         }
       >
         {editingNew ? (
           <div className="space-y-4">
-            <div><Label>Group Name</Label><Input className="mt-1.5" placeholder="e.g., Standard Full-Time" /></div>
-            <div><Label>Description</Label><Input className="mt-1.5" placeholder="Brief description of this policy" /></div>
+            <div><Label>Group Name</Label><Input className="mt-1.5" placeholder="e.g., Standard Full-Time" value={newName} onChange={e => setNewName(e.target.value)} /></div>
+            <div><Label>Description</Label><Input className="mt-1.5" placeholder="Brief description of this policy" value={newDesc} onChange={e => setNewDesc(e.target.value)} /></div>
           </div>
         ) : selectedGroup ? (
           <div>
