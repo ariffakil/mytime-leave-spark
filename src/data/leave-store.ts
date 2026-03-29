@@ -135,13 +135,68 @@ export const employees: Employee[] = [
 ];
 
 export const leaveRequests: LeaveRequest[] = [
-  { id: "lr1", employeeId: "e1", leaveTypeId: "lt1", startDate: "2025-04-10", endDate: "2025-04-14", days: 3, reason: "Family vacation", status: "pending", appliedOn: "2025-03-25" },
-  { id: "lr2", employeeId: "e2", leaveTypeId: "lt2", startDate: "2025-03-28", endDate: "2025-03-28", days: 1, reason: "Doctor appointment", status: "approved", appliedOn: "2025-03-20", reviewedBy: "HR Admin", reviewedOn: "2025-03-21" },
-  { id: "lr3", employeeId: "e5", leaveTypeId: "lt1", startDate: "2025-04-21", endDate: "2025-04-25", days: 5, reason: "Travel abroad", status: "pending", appliedOn: "2025-03-24" },
-  { id: "lr4", employeeId: "e6", leaveTypeId: "lt3", startDate: "2025-03-15", endDate: "2025-03-15", days: 1, reason: "Personal errand", status: "approved", appliedOn: "2025-03-10", reviewedBy: "HR Admin", reviewedOn: "2025-03-11" },
-  { id: "lr5", employeeId: "e3", leaveTypeId: "lt1", startDate: "2025-05-05", endDate: "2025-05-09", days: 5, reason: "Extended holiday", status: "rejected", appliedOn: "2025-03-18", reviewedBy: "HR Admin", reviewedOn: "2025-03-19" },
-  { id: "lr6", employeeId: "e9", leaveTypeId: "lt2", startDate: "2025-03-27", endDate: "2025-03-28", days: 2, reason: "Feeling unwell", status: "pending", appliedOn: "2025-03-26" },
-  { id: "lr7", employeeId: "e7", leaveTypeId: "lt3", startDate: "2025-04-01", endDate: "2025-04-01", days: 1, reason: "Home repair", status: "approved", appliedOn: "2025-03-22", reviewedBy: "HR Admin", reviewedOn: "2025-03-23" },
+  {
+    id: "lr1", employeeId: "e1", leaveTypeId: "lt1", startDate: "2025-04-10", endDate: "2025-04-14", days: 3, reason: "Family vacation", status: "pending", appliedOn: "2025-03-25",
+    alternativeEmployeeId: "e5",
+    attachments: [{ name: "travel_plan.pdf", size: "245 KB", type: "pdf" }],
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "approved", approverName: "John Director", comment: "Approved, workload covered.", actionDate: "2025-03-26" },
+      { level: 2, role: "HR Manager", status: "pending" },
+      { level: 3, role: "General Manager", status: "pending" },
+    ],
+  },
+  {
+    id: "lr2", employeeId: "e2", leaveTypeId: "lt2", startDate: "2025-03-28", endDate: "2025-03-28", days: 1, reason: "Doctor appointment", status: "approved", appliedOn: "2025-03-20", reviewedBy: "HR Admin", reviewedOn: "2025-03-21",
+    alternativeEmployeeId: "e1",
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "approved", approverName: "John Director", comment: "OK", actionDate: "2025-03-20" },
+      { level: 2, role: "HR Manager", status: "approved", approverName: "Lisa Wang", comment: "Approved.", actionDate: "2025-03-21" },
+      { level: 3, role: "General Manager", status: "approved", approverName: "CEO Office", comment: "Noted.", actionDate: "2025-03-21" },
+    ],
+  },
+  {
+    id: "lr3", employeeId: "e5", leaveTypeId: "lt1", startDate: "2025-04-21", endDate: "2025-04-25", days: 5, reason: "Travel abroad", status: "pending", appliedOn: "2025-03-24",
+    alternativeEmployeeId: "e9",
+    attachments: [{ name: "flight_tickets.pdf", size: "1.2 MB", type: "pdf" }, { name: "hotel_booking.jpg", size: "340 KB", type: "image" }],
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "pending" },
+      { level: 2, role: "HR Manager", status: "pending" },
+      { level: 3, role: "General Manager", status: "pending" },
+    ],
+  },
+  {
+    id: "lr4", employeeId: "e6", leaveTypeId: "lt3", startDate: "2025-03-15", endDate: "2025-03-15", days: 1, reason: "Personal errand", status: "approved", appliedOn: "2025-03-10", reviewedBy: "HR Admin", reviewedOn: "2025-03-11",
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "approved", approverName: "Sales Lead", comment: "Fine", actionDate: "2025-03-10" },
+      { level: 2, role: "HR Manager", status: "approved", approverName: "Lisa Wang", actionDate: "2025-03-11" },
+      { level: 3, role: "General Manager", status: "skipped" },
+    ],
+  },
+  {
+    id: "lr5", employeeId: "e3", leaveTypeId: "lt1", startDate: "2025-05-05", endDate: "2025-05-09", days: 5, reason: "Extended holiday", status: "rejected", appliedOn: "2025-03-18", reviewedBy: "HR Admin", reviewedOn: "2025-03-19",
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "approved", approverName: "Design Lead", comment: "Can be managed", actionDate: "2025-03-18" },
+      { level: 2, role: "HR Manager", status: "rejected", approverName: "Lisa Wang", comment: "Conflicts with company event. Please reschedule.", actionDate: "2025-03-19" },
+      { level: 3, role: "General Manager", status: "skipped" },
+    ],
+  },
+  {
+    id: "lr6", employeeId: "e9", leaveTypeId: "lt2", startDate: "2025-03-27", endDate: "2025-03-28", days: 2, reason: "Feeling unwell", status: "pending", appliedOn: "2025-03-26",
+    attachments: [{ name: "medical_cert.pdf", size: "120 KB", type: "pdf" }],
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "approved", approverName: "John Director", comment: "Get well soon", actionDate: "2025-03-26" },
+      { level: 2, role: "HR Manager", status: "approved", approverName: "Lisa Wang", actionDate: "2025-03-26" },
+      { level: 3, role: "General Manager", status: "pending" },
+    ],
+  },
+  {
+    id: "lr7", employeeId: "e7", leaveTypeId: "lt3", startDate: "2025-04-01", endDate: "2025-04-01", days: 1, reason: "Home repair", status: "approved", appliedOn: "2025-03-22", reviewedBy: "HR Admin", reviewedOn: "2025-03-23",
+    approvalChain: [
+      { level: 1, role: "Department Head", status: "approved", approverName: "HR Lead", actionDate: "2025-03-22" },
+      { level: 2, role: "HR Manager", status: "approved", approverName: "Lisa Wang", actionDate: "2025-03-23" },
+      { level: 3, role: "General Manager", status: "approved", approverName: "CEO Office", actionDate: "2025-03-23" },
+    ],
+  },
 ];
 
 export const leaveBalances: LeaveBalance[] = [
