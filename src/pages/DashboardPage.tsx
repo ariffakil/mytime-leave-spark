@@ -178,14 +178,14 @@ export default function DashboardPage() {
         description={selectedRequest ? `Request #${selectedRequest.id}` : ""}
         width="w-[520px]"
         footer={
-          selectedRequest?.status === "pending" ? (
+          selectedRequest?.status === "pending" && getCurrentStep(selectedRequest.approvalChain) ? (
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setDrawerOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={() => handleAction("rejected")} className="gap-1.5">
                 <XCircle className="h-4 w-4" /> Reject
               </Button>
               <Button onClick={() => handleAction("approved")} className="gap-1.5">
-                <CheckCircle2 className="h-4 w-4" /> Approve
+                <CheckCircle2 className="h-4 w-4" /> Approve as {getCurrentStep(selectedRequest.approvalChain)?.role}
               </Button>
             </div>
           ) : (
