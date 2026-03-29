@@ -98,8 +98,8 @@ export default function LeaveGroupsPage() {
       >
         {editingNew ? (
           <div className="space-y-4">
-            <div><Label>Group Name</Label><Input className="mt-1.5" placeholder="e.g., Standard Full-Time" /></div>
-            <div><Label>Description</Label><Input className="mt-1.5" placeholder="Brief description of this policy" /></div>
+            <div><Label>Group Name</Label><Input className="mt-1.5" placeholder="e.g., Standard Full-Time" value={newName} onChange={e => setNewName(e.target.value)} /></div>
+            <div><Label>Description</Label><Input className="mt-1.5" placeholder="Brief description of this policy" value={newDesc} onChange={e => setNewDesc(e.target.value)} /></div>
           </div>
         ) : selectedGroup ? (
           <div>
