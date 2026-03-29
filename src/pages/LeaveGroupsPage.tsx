@@ -13,9 +13,22 @@ export default function LeaveGroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<LeaveGroup | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingNew, setEditingNew] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
 
   const openGroupDetail = (g: LeaveGroup) => { setSelectedGroup(g); setEditingNew(false); setDrawerOpen(true); };
-  const openNewGroup = () => { setSelectedGroup(null); setEditingNew(true); setDrawerOpen(true); };
+  const openNewGroup = () => { setSelectedGroup(null); setEditingNew(true); setNewName(""); setNewDesc(""); setDrawerOpen(true); };
+
+  const saveNewGroup = () => {
+    if (!newName.trim()) return;
+    const newGroup: LeaveGroup = {
+      id: `lg${Date.now()}`, name: newName.trim(), description: newDesc.trim(),
+      rules: [], createdAt: new Date().toISOString().split("T")[0],
+    };
+    setGroups([...groups, newGroup]);
+    setSelectedGroup(newGroup);
+    setEditingNew(false);
+  };
 
   const addRule = () => {
     if (!selectedGroup) return;
