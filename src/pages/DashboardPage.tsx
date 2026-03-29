@@ -246,6 +246,83 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Alternative Employee */}
+              {(() => {
+                const altEmp = selectedRequest.alternativeEmployeeId ? getEmployee(selectedRequest.alternativeEmployeeId) : null;
+                return (
+                  <div className="border border-border rounded-lg p-3 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <UserCheck className="h-4 w-4 text-primary" />
+                      <p className="text-xs font-semibold text-foreground">ALTERNATIVE EMPLOYEE</p>
+                    </div>
+                    {altEmp ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-xs font-semibold text-accent-foreground">{altEmp.avatar}</div>
+                        <p className="text-sm font-medium text-foreground">{altEmp.name}</p>
+                        <span className="text-xs text-muted-foreground">· {altEmp.department}</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Not assigned</p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Attachments */}
+              {selectedRequest.attachments && selectedRequest.attachments.length > 0 && (
+                <div className="border border-border rounded-lg p-3 bg-muted/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Paperclip className="h-4 w-4 text-primary" />
+                    <p className="text-xs font-semibold text-foreground">ATTACHMENTS</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {selectedRequest.attachments.map((att, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded-md bg-background border border-border">
+                        {att.type === "image" ? <Image className="h-3.5 w-3.5 text-primary" /> : <FileText className="h-3.5 w-3.5 text-primary" />}
+                        <span className="text-sm text-foreground truncate">{att.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{att.size}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Approval Chain */}
+              <div className="border border-border rounded-lg p-3 bg-muted/20">
+                <p className="text-xs font-semibold text-foreground mb-3">APPROVAL WORKFLOW</p>
+                {selectedRequest.approvalChain.map((step, i) => (
+                  <div key={i} className="relative">
+                    {i < selectedRequest.approvalChain.length - 1 && (
+                      <div className={`absolute left-[9px] top-7 w-px h-[calc(100%-4px)] ${step.status === "approved" ? "bg-success/40" : "bg-border"}`} />
+                    )}
+                    <div className="flex items-start gap-3 pb-3">
+                      <div className="mt-0.5">
+                        {step.status === "approved" ? <CheckCircle2 className="h-4 w-4 text-success" /> :
+                         step.status === "rejected" ? <XCircle className="h-4 w-4 text-destructive" /> :
+                         step.status === "skipped" ? <SkipForward className="h-4 w-4 text-muted-foreground" /> :
+                         <Clock className="h-4 w-4 text-warning" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-foreground">{step.role}</p>
+                          <span className={`text-xs font-medium capitalize ${
+                            step.status === "approved" ? "text-success" :
+                            step.status === "rejected" ? "text-destructive" :
+                            step.status === "skipped" ? "text-muted-foreground" : "text-warning"
+                          }`}>{step.status}</span>
+                        </div>
+                        {step.approverName && <p className="text-xs text-muted-foreground">{step.approverName} · {step.actionDate}</p>}
+                        {step.comment && (
+                          <div className="mt-1 p-2 rounded-md bg-background border border-border">
+                            <p className="text-xs text-foreground italic">"{step.comment}"</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* Balance Summary */}
               {balance && (
                 <div>
@@ -271,19 +348,10 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Review Info (if already reviewed) */}
-              {selectedRequest.reviewedBy && (
-                <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                  <p className="text-xs text-muted-foreground mb-1">Reviewed By</p>
-                  <p className="text-sm font-medium text-foreground">{selectedRequest.reviewedBy}</p>
-                  <p className="text-xs text-muted-foreground mt-1">on {selectedRequest.reviewedOn}</p>
-                </div>
-              )}
-
               {/* Manager Comments */}
-              {selectedRequest.status === "pending" && (
+              {selectedRequest.status === "pending" && getCurrentStep(selectedRequest.approvalChain) && (
                 <div>
-                  <Label className="text-xs">Manager Comments</Label>
+                  <Label className="text-xs">Comment as {getCurrentStep(selectedRequest.approvalChain)?.role}</Label>
                   <Textarea
                     className="mt-1.5 text-sm"
                     placeholder="Add comments for approval or rejection reason..."
