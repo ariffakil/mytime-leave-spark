@@ -92,7 +92,7 @@ export default function LeaveGroupsPage() {
         footer={
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => setDrawerOpen(false)}>Close</Button>
-            <Button onClick={() => setDrawerOpen(false)}>Save Changes</Button>
+            <Button onClick={() => { if (editingNew) { saveNewGroup(); } else { setDrawerOpen(false); } }}>{editingNew ? "Create Group" : "Save Changes"}</Button>
           </div>
         }
       >
