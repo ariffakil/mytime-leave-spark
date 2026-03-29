@@ -42,15 +42,28 @@ export default function DashboardPage() {
     setDrawerOpen(true);
   };
 
+  const getCurrentStep = (chain: ApprovalStep[]) => chain.find(s => s.status === "pending");
+
   const handleAction = (action: "approved" | "rejected") => {
     if (!selectedRequest) return;
-    const updated = localRequests.map(r =>
-      r.id === selectedRequest.id
-        ? { ...r, status: action as LeaveRequest["status"], reviewedBy: "HR Manager", reviewedOn: new Date().toISOString().split("T")[0] }
-        : r
-    );
+    const updated = localRequests.map(r => {
+      if (r.id !== selectedRequest.id) return r;
+      const chain = r.approvalChain.map(s => {
+        if (s.status === "pending" && s === getCurrentStep(r.approvalChain)) {
+          return { ...s, status: action as ApprovalStep["status"], approverName: "Current User", comment: managerComment || undefined, actionDate: new Date().toISOString().split("T")[0] };
+        }
+        if (action === "rejected" && s.status === "pending") return { ...s, status: "skipped" as const };
+        return s;
+      });
+      const allDone = chain.every(s => s.status === "approved" || s.status === "skipped");
+      const anyRejected = chain.some(s => s.status === "rejected");
+      const newStatus = anyRejected ? "rejected" as const : allDone ? "approved" as const : r.status;
+      return { ...r, approvalChain: chain, status: newStatus, reviewedBy: allDone || anyRejected ? "Current User" : r.reviewedBy, reviewedOn: allDone || anyRejected ? new Date().toISOString().split("T")[0] : r.reviewedOn };
+    });
     setLocalRequests(updated);
-    setSelectedRequest({ ...selectedRequest, status: action, reviewedBy: "HR Manager", reviewedOn: new Date().toISOString().split("T")[0] });
+    const updatedReq = updated.find(r => r.id === selectedRequest.id)!;
+    setSelectedRequest(updatedReq);
+    setManagerComment("");
   };
 
   return (
